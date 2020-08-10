@@ -4,28 +4,33 @@ aliases:
     - chapter/tutorials/lte
 ---
 
-The following tutorial demonstrates the use of the LTE CAT-M1 and NB-IoT functionality on cellular enabled Pycom modules.
+The following tutorials demonstrate the use of the LTE CAT-M1 and NB-IoT functionality on cellular enabled Pycom modules.
 
-GPy and FiPy support both LTE CAT-M1 and NB-IoT. These are newer, low power, long range, cellular protocols. They are not the same as the full version of 2G/3G/LTE supported by cell phones, and require your local carriers to support them. At the time of writing, CAT-M1 and NB-IoT connectivity is not widely available so be sure to check with local carriers if support is available where you are. Together with the SIM card, the provider will supply you with configuration details: Usually band and APN. Use these in the example code below.
+## LTE connection example
+Our cellular modules support both LTE CAT-M1 and NB-IoT, these are new lower power, long range, cellular protocols. These are not the same as the full version of 2G/3G/LTE supported by cell phones, and require your local carriers to support them. At the time of writing, CAT-M1 and NB-IoT connectivity is not widely available so be sure to check with local carriers if support is available where you are.
 
+Both networks make can make use of the same example:
+(Make sure you check the coverage map of your provider to confirm coverage in your area)
 ```python
 from network import LTE
 import time
 import socket
 
 lte = LTE()
-#when using verizon, use
+lte.reset()
+lte.init()
+#when using verizon, use 
 #lte.init(carrier=verizon)
-#when usint AT&T use,
-#lte.init(carrier=at&t)
+#when usint AT&T use, 
+#use lte.init(carrier = at&t)
 
 #some carriers do not require an APN
 #also, check the band settings, for some carriers they auto-configure.
-lte.attach(band=20, apn="your apn")
+lte.attach(band=20, apn="your apn") 
 while not lte.isattached()
     time.delay(0.25)
     print('.')
-    print(lte.send_at_cmd('AT!="fsm"'))         # get the System FSM
+    print(lte.send_at_cmd('AT!="fsm"')         # get the System FSM
 print("LTE modem attached!")
 lte.connect()
 while not lte.isconnected():
@@ -40,13 +45,26 @@ print(socket.getaddrinfo('pycom.io', 80))
 lte.deinit()
 #now we can safely machine.deepsleep()
 ```
-The last line of the script should return a tuple containing the IP address of the Pycom webserver.
+The last line of the script should return a tuple containing the IP address of the Pycom server.
 
->Note: the first time, it can take a long while to attach to the network.
+>Note: the first time, it can take a long while to attach to the network. 
 
-# LTE Troubleshooting guide
+## LTE Callback
+If your project needs to be connected for a long time, for example when using the [Pygate](/datasheets/expansionboards/pygate/), we need to add some extra reliability checks in order to check if we are still connected. For this, we can use the LTE callback. In event of coverage loss, the function `cb_handler` will be called within ~10 seconds. The handler should then reset the LTE modem, re-attach and re-connect to the LTE network. The simplest way to do this is calling `machine.reset()` (depending on your use-case)
 
-Below, we review the responses from `print(lte.send_at_cmd('AT!="fsm"'))`. If you are having trouble attaching to the network, or getting a connection up and running, this might give some direction into what you are looking for. We are mainly looking at the status of the top two indicators for now.
+```python
+def cb_handler():
+    print("LTE Coverage lost, resetting modem")
+    # machine.reset()
+    # attach sequence
+
+#after attaching
+lte.lte_callback(lte.EVENT_COVERAGE_LOSS, cb_handler)
+```
+
+## LTE Troubleshooting guide
+
+Below, we review the responses from `print(lte.send_at_cmd('AT!="fsm"'))`. If you are having trouble attaching to the network, or getting a connection up and running, this might give some direction into what is wrong. We are mainly looking at the status of the top two indicators for now.
 1. Before calling `lte.attach()`, the status will be `STOPPED`.
     ```
     SYSTEM FSM
@@ -73,7 +91,7 @@ Below, we review the responses from `print(lte.send_at_cmd('AT!="fsm"'))`. If yo
     | HP CAT FSM               |IDLE                |
     +--------------------------+--------------------+
     ```
-1. With no SIM card detected, the `RRC TOP FSM` will keep status `CAMPED`. You will see `HP USIM FSM` marked `ABSENT`.
+2. With no SIM card detected, the `RRC TOP FSM` will keep status `CAMPED`. You will see `HP USIM FSM` marked `ABSENT`.
     ```
     SYSTEM FSM
     ==========
@@ -99,7 +117,7 @@ Below, we review the responses from `print(lte.send_at_cmd('AT!="fsm"'))`. If yo
     | HP CAT FSM               |NULL                |
     +--------------------------+--------------------+
     ```
-1. SIM card inserted and attaching:
+3.  SIM card inserted and attaching:
     * While `SCANNING`, the `RRC SEARCH FSM` goes from `WAIT_RSSI` to `WAIT_CELL_ID`
     * Later, the `RRC TOP FSM` goes from `SCANNING` to `SYNCING`
     * There are some states in between not discussed here.
@@ -132,7 +150,7 @@ Below, we review the responses from `print(lte.send_at_cmd('AT!="fsm"'))`. If yo
     | HP CAT FSM               |IDLE                |
     +--------------------------+--------------------+
     ```
-1. Connecting
+4. Connecting
     ```
     SYSTEM FSM
     ==========
@@ -158,7 +176,7 @@ Below, we review the responses from `print(lte.send_at_cmd('AT!="fsm"'))`. If yo
     | HP CAT FSM               |IDLE                |
     +--------------------------+--------------------+
     ```
-1. Connected
+5. Connected, note that `EMM MAIN FSM` has state `REGISTERED`. After a while, the `RRC TOP FSM` will have state `CAMPED`.
     ```
     SYSTEM FSM
     ==========
