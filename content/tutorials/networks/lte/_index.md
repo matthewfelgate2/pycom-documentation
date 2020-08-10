@@ -50,15 +50,15 @@ The last line of the script should return a tuple containing the IP address of t
 >Note: the first time, it can take a long while to attach to the network. 
 
 ## LTE Callback
-If your project needs to be connected for a long time, for example when using the [Pygate](/datasheets/expansionboards/pygate/), we need to add some extra reliability checks in order to check if we are still connected. For this, we can use the LTE callback. In event of coverage loss, the function `cb_handler` will be called within ~10 seconds. The handler should then reset the LTE modem, re-attach and re-connect to the LTE network. The simplest way to do this is calling `machine.reset()` (depending on your use-case)
+If your project needs to be connected for a long time, for example when using the [Pygate](/datasheets/expansionboards/pygate/), we need to add some extra reliability checks in order to check if we are still connected. For this, we can use the LTE callback. In event of coverage loss, the function `cb_handler` will be called within ~10 seconds. The handler should then reset the LTE modem, re-attach and re-connect to the LTE network. The simplest way to do this is calling `machine.reset()` (depending on your use-case), which will reset the module. Note that resetting the module does **NOT** reset the LTE modem!
 
 ```python
 def cb_handler():
-    print("LTE Coverage lost, resetting modem")
+    print("LTE Coverage lost, resetting")
+    # lte.reset()
     # machine.reset()
-    # attach sequence
 
-#after attaching
+# after attaching
 lte.lte_callback(lte.EVENT_COVERAGE_LOSS, cb_handler)
 ```
 
