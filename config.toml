@@ -1556,6 +1556,13 @@ theme = "doc-theme"
     weight = 50
 
 [[menu.main]]
+    name = "PyJTAG"
+    url = "/advance/pyjtag/"
+    identifier = "advance@pyjtag"
+    parent = "advance"
+    weight = 60
+
+[[menu.main]]
     name="License"
     url="/license/"
     identifier="license"
